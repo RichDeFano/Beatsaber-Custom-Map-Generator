@@ -7,7 +7,7 @@ import javax.swing.JFileChooser;
 import java.util.LinkedList;
 import java.text.DecimalFormat;
 import java.util.TreeMap;
-
+import javazoom.spi.vorbis.sampled.file.VorbisAudioFileReader;
 public class wavToBytes {
     private static  AudioInputStream songBeingRead;
     private boolean bigEndian;
@@ -21,15 +21,29 @@ public class wavToBytes {
     private float bitRate;
 
 
-    public wavToBytes()
+
+    public wavToBytes(File oggFile)
     {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Please choose the appropriate .wav file:");
-        chooser.setCurrentDirectory(new File (System.getProperty("user.dir")));
-        chooser.showOpenDialog(null);
-        File soundFile = chooser.getSelectedFile();
+        //JFileChooser chooser = new JFileChooser();
+       // chooser.setDialogTitle("Please choose the appropriate .ogg file:");
+        //chooser.setCurrentDirectory(new File (System.getProperty("user.dir")));
+        //chooser.showOpenDialog(null);
+        File soundFile = oggFile;
         try
-            {songBeingRead = AudioSystem.getAudioInputStream(soundFile);}
+            {
+                VorbisAudioFileReader vb = new VorbisAudioFileReader();
+                AudioInputStream in = vb.getAudioInputStream(soundFile);
+                AudioFormat baseFormat = in.getFormat();
+                AudioFormat targetFormat = new AudioFormat(
+                        AudioFormat.Encoding.PCM_SIGNED,
+                        baseFormat.getSampleRate(),
+                        16,
+                        baseFormat.getChannels(),
+                        baseFormat.getChannels() * 2,
+                        baseFormat.getSampleRate(),
+                        false);
+                songBeingRead = AudioSystem.getAudioInputStream(targetFormat, in);
+            }
         catch (Exception UnsupportedAudioFileException)
             {System.out.println("Unsupported Sound File Type.");}
     }
@@ -74,6 +88,7 @@ public class wavToBytes {
             songBeingRead.transferTo(songByteOS);
             byte[] songByteArray = songByteOS.toByteArray();
             fileLengthInBytes = songByteArray.length;
+            //System.out.println("DEBUG: File Length: " + fileLengthInBytes);
             ///Adding two successive bytes together, to create one 16 Bit Signed little-E PCM Number.
                 for (int j = 0; j+1<songByteArray.length;j=j+2)
                 {
@@ -92,7 +107,8 @@ public class wavToBytes {
         TreeMap<Double,Double> listOfBitsPer8th = new TreeMap<>();
         float tempFloat = this.getFrameRate();
         for (int i = 0; i < (fileTime * 8); i++) {
-            double Hz = Double.parseDouble(new Float(tempFloat).toString());
+            double Hz = Double.parseDouble(Float.toString(tempFloat));
+            //System.out.println("DEBUG: HZ = " + Hz);
             //System.out.println(Hz);
             //LinkedList<Double> bitsPer8th = new LinkedList<>();
             double avOfBits = 0;
@@ -100,15 +116,23 @@ public class wavToBytes {
             while (!exitLoop) {
                 for (double j = 0; j < (Hz / 8); j++) {
                     double tempBit = songToData.remove(i);
-                    avOfBits = avOfBits + tempBit;
+                    avOfBits = avOfBits + (tempBit*tempBit);
                     //bitsPer8th.add(tempBit);
                 }
-                double fullAverage = (avOfBits / (Hz / 8));
+
+                double fullAverage = Math.sqrt(avOfBits / (Hz / 8)); //Calculating the RMS
+                //System.out.println("DEBUG: " + fullAverage);
                 double counter = i;
                 if (counter != 0)
-                {listOfBitsPer8th.put(counter/8,fullAverage);}
+                {
+                    listOfBitsPer8th.put(counter/8,fullAverage);
+                    //System.out.println("DEBUG: listOfBits = " + listOfBitsPer8th);
+                }
                 else
-                {listOfBitsPer8th.put(counter,fullAverage);}
+                {
+                    listOfBitsPer8th.put(counter,fullAverage);
+                    //System.out.println("DEBUG: listOfBits = " + listOfBitsPer8th);
+                }
                 exitLoop = true;
             }
             //listOfBitsPer8th.put(i,fullAverage);

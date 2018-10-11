@@ -17,32 +17,50 @@ import com.google.common.collect.ArrayListMultimap;
 
 public class ImportJsonFiles {
     private String songName;
-    private double bpm;
+    //private double bpm;
+    private String songSubName;
+    private String authorName;
+    private double beatsPerMinute;
+    private double previewStartTime;
+    private double previewDuration;
+    private String coverImagePath;
+    private String environmentName;
+    private String version;
+    private double beatsPerBar;
+    private double noteJumpSpeed;
+    private double shuffle;
+    private double shufflePeriod;
     private LinkedList<LinkedList<Double>> notesList = new LinkedList<>();
 
-    public ListMultimap<Double,LinkedList<Double>> jSonList() {
+    public ListMultimap<Double,LinkedList<Double>> jSonList(File tempJson,File tempInfo) {
         JSONParser parser = new JSONParser();
         ImportJsonFiles json = new ImportJsonFiles();
         try {
             ////
-            JFileChooser chooser = new JFileChooser();
-            chooser.setDialogTitle("Please choose the appropriate .json file:");
-            chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
-            chooser.showOpenDialog(null);
-            File jsonInput = chooser.getSelectedFile();
-            FileReader tempReader = new FileReader(jsonInput);
+            //JFileChooser chooser = new JFileChooser();
+            //chooser.setDialogTitle("Please choose the appropriate .json file:");
+            //chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+            //chooser.showOpenDialog(null);
+            //File jsonInput = chooser.getSelectedFile();
+            //FileReader tempReader = new FileReader(jsonInput);
             ///
+            FileReader tempReader = new FileReader(tempJson);
+
+
             JSONObject jsonFile;
             try
             {jsonFile = (JSONObject) parser.parse(tempReader);}
             catch (Exception IOException)
             {
                 jsonFile = null;
-                System.out.println("ErrorL json File not initialized");
+                System.out.println("Error: json File not initialized");
             }
-            json.songName = (String) jsonFile.get("_name");
-            Long tempLong = (long) jsonFile.get("_beatsPerMinute");
-            json.bpm = tempLong.doubleValue();
+            version = (String) jsonFile.get("_version");
+            beatsPerBar = ((Number)jsonFile.get("_beatsPerBar")).doubleValue();
+            noteJumpSpeed = ((Number)jsonFile.get("_noteJumpSpeed")).doubleValue();
+            shuffle = ((Number)jsonFile.get("_shuffle")).doubleValue();
+            shufflePeriod = ((Number)jsonFile.get("_shufflePeriod")).doubleValue();
+            jSonInfo(tempInfo);
             JSONArray notes = (JSONArray) jsonFile.get("_notes");
 
 
@@ -63,7 +81,8 @@ public class ImportJsonFiles {
                         if (tempValue != null && !tempValue.isEmpty()) {
                             double tempDouble = Double.parseDouble(tempValue);
                             ///this "time" isnt in seconds, but in ascending beats. We need to oonvert it to seconds. secondsIn = ((_time)/(BPM/60))
-                            double secondsIn = ((tempDouble)/(json.bpm/60));
+                            //System.out.println("DEBUG: " + beatsPerMinute);
+                            double secondsIn = ((tempDouble)/(beatsPerMinute/60));
                             //System.out.println("Temp: secondsIn =" + secondsIn + "||" + tempDouble + "," + bpm + "," + (bpm/60));
                             eachFive.add(secondsIn);
                         } else {
@@ -128,11 +147,80 @@ public class ImportJsonFiles {
         catch (FileNotFoundException e){
         System.out.println("Error: FileNotFoundException.");
         }
+        //System.out.println("DEBUG: " + json.notesList);
         //uSystem.out.println("DEBUG: noteList Size = " + json.notesList.size());
         ListMultimap<Double,LinkedList<Double>> tempMap = jSonToTimeDomainMap(json.notesList);
+        //System.out.println("DEBUG: " + tempMap);
         return (tempMap);
     }
 
+    public void jSonInfo(File tempInfo) {
+
+            JSONParser parser = new JSONParser();
+            ImportJsonFiles json = new ImportJsonFiles();
+            try {
+                ////
+                //JFileChooser chooser = new JFileChooser();
+                //chooser.setDialogTitle("Please choose the appropriate .json info file:");
+                //chooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+                //chooser.showOpenDialog(null);
+                //File jsonInput = chooser.getSelectedFile();
+                FileReader tempReader = new FileReader(tempInfo);
+                ///
+                JSONObject jsonFile;
+                try {
+                    jsonFile = (JSONObject) parser.parse(tempReader);
+                } catch (Exception IOException) {
+                    jsonFile = null;
+                    System.out.println("Error: json File not initialized");
+                    }
+                songName = (String) jsonFile.get("songName");
+                songSubName = (String) jsonFile.get("songSubName");
+                authorName = (String) jsonFile.get("authorName");
+                beatsPerMinute = ((Number)jsonFile.get("beatsPerMinute")).doubleValue();
+                previewStartTime = ((Number)jsonFile.get("previewStartTime")).doubleValue();
+                previewDuration = ((Number)jsonFile.get("previewDuration")).doubleValue();
+                coverImagePath = (String) jsonFile.get("coverImagePath");
+                environmentName = (String) jsonFile.get("environmentName");
+                printInfo();
+                JSONArray difficultyArray = (JSONArray) jsonFile.get("difficultyLevels");
+
+/*
+    private String songName;
+    //private double bpm;
+    private String songSubName;
+    private String authorName;
+    private double beatsPerMinute;
+    private double previewStartTime;
+    private double previewDuration;
+    private String coverImagePath;
+    private String environmentName;
+ */
+            }
+            catch (FileNotFoundException e){
+                System.out.println("Error: FileNotFoundException.");
+            }
+        }
+
+    public void printInfo()
+    {
+     System.out.println("******************SONG INFORMATION******************");
+     System.out.println("Song Name: " + songName);
+     System.out.println("Artist Name: " + songSubName);
+     System.out.println("Beatmap Author: " + authorName);
+     System.out.println("Beats Per Minute: " + beatsPerMinute);
+     System.out.println("Preview Start Time: " + previewStartTime + " seconds.");
+     System.out.println("Preview Duration: " + previewDuration + " seconds.");
+     System.out.println("Cover Image FilePath: " + System.getProperty("user.dir") + coverImagePath );
+     System.out.println("Environment Name: " + environmentName);
+     System.out.println("Version: " + version);
+     System.out.println("Beats Per Bar: " + beatsPerBar);
+     System.out.println("Note Jump Speed: " + noteJumpSpeed);
+     System.out.println("Shuffle: " + shuffle);
+     System.out.println("Shuffle Period: " + shufflePeriod);
+     System.out.println("****************************************************");
+
+ }
     public ListMultimap<Double,LinkedList<Double>> jSonToTimeDomainMap(LinkedList<LinkedList<Double>> notesList)
     {
         ListMultimap<Double,LinkedList<Double>> multimap = ArrayListMultimap.create();
@@ -141,6 +229,7 @@ public class ImportJsonFiles {
         while (fullDataIterator.hasNext()) {
             LinkedList<Double> at5 = (LinkedList<Double>)fullDataIterator.next();
             double timeAt = at5.remove(3);
+            //System.out.println("DEBUG: " + timeAt);
             multimap.put(timeAt,at5);
             }
 
